@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from types_ import *
-from torchvision.models import alexnet, resnet152, resnet101
+from torchvision.models import alexnet, resnet152, resnet50
 
 class VAE(nn.Module):
     def __init__(self,
@@ -16,7 +16,7 @@ class VAE(nn.Module):
 
 
         # encoding
-        pretrained_net = resnet101(pretrained=True)
+        pretrained_net = resnet50(pretrained=True)
         modules = list(pretrained_net.children())[:-1]  # delete the last fc layer.
         modules.extend([nn.Flatten(start_dim=1),
                         nn.Linear(pretrained_net.fc.in_features, self.fc_hidden1),

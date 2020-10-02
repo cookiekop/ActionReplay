@@ -6,7 +6,6 @@ from torch import optim
 import matplotlib.pyplot as plt
 
 
-
 # data = CIFAR10('datasets/',
 #                     train=True,
 #                     transform=transform,
@@ -33,7 +32,7 @@ val_data_loader = DataLoader(val_set,
 
 device = 'cuda'
 log_interval = 500
-epochs = 10
+epochs = 2
 model = VAE(latent_dim=512).to(device)
 optimizer = optim.Adam([
     {'params': model.encoder.parameters(), 'lr': 5e-4},
@@ -71,4 +70,4 @@ torch.save(model.state_dict(), 'models/vae_mark1.pth')
 #     gen = model(img.to(device))[0].squeeze(0).permute(1, 2, 0)
 #     axs[1].imshow(gen.cpu().detach().numpy())
 #     plt.pause(-1)
-
+#

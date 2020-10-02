@@ -16,7 +16,7 @@ class VAE(nn.Module):
 
 
         # encoding
-        pretrained_net = resnet50(pretrained=True)
+        pretrained_net = resnet50(pretrained=True, progress=False)
         modules = list(pretrained_net.children())[:-1]  # delete the last fc layer.
         modules.extend([nn.Flatten(start_dim=1),
                         nn.Linear(pretrained_net.fc.in_features, self.fc_hidden1),

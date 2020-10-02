@@ -33,7 +33,7 @@ val_data_loader = DataLoader(val_set,
 
 device = 'cuda'
 log_interval = 500
-epochs = 2
+epochs = 10
 model = VAE(latent_dim=512).to(device)
 optimizer = optim.Adam([
     {'params': model.encoder.parameters(), 'lr': 5e-4},

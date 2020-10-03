@@ -1,6 +1,6 @@
 # ActionReplay
 
-The goal is to build a Generative Replay(GR) model that can recognize human actions in a continual learning fashion. 
+The goal is to build a Generative Replay(GR) model that can recognize human actions in a continual learning fashion.
 
 ## Setup
 ```bash

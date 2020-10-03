@@ -15,7 +15,7 @@ mkdir datasets models
 - [Jupyter](https://jupyter.org/)
 
 ## Train
-```python
+```bash
 python pretrain_vae.py
 ```
 

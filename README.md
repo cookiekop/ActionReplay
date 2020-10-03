@@ -9,6 +9,7 @@ mkdir datasets models
 ```
 ### Prerequisites
 - [Python](https://www.python.org/)
+- [CUDA](https://developer.nvidia.com/cuda-toolkit)
 - [PyTorch](https://pytorch.org/)
 - [Matplotlib](https://matplotlib.org/)
 - [Jupyter](https://jupyter.org/)

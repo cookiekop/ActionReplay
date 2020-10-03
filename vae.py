@@ -14,7 +14,6 @@ class VAE(nn.Module):
         self.fc_hidden2 = 1024
         self.do_p = 0.3
 
-
         # encoding
         pretrained_net = resnet50(pretrained=True, progress=False)
         modules = list(pretrained_net.children())[:-1]  # delete the last fc layer.
@@ -94,7 +93,8 @@ class VAE(nn.Module):
         mu = args[2]
         log_var = args[3]
         kld_weight = kwargs['M_N']
-        recon_loss = F.binary_cross_entropy(recons, input)
+        mask = kwargs['mask']
+        recon_loss = F.binary_cross_entropy(recons, input, weight=mask)
         kld_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp(), dim=1), dim=0)
         loss = recon_loss + kld_loss * kld_weight
 
@@ -102,15 +102,8 @@ class VAE(nn.Module):
 
     def sample(self,
                num_samples:int,
-               current_device: int, **kwargs) -> Tensor:
-        """
-        Samples from the latent space and return the corresponding
-        image space map.
-        :param num_samples: (Int) Number of samples
-        :param current_device: (Int) Device to run the model
-        :return: (Tensor)
-        """
-        z = torch.randn(num_samples,self.latent_dim)
+               current_device: int, **kwargs):
+        z = torch.randn(num_samples, self.latent_dim)
         z = z.to(current_device)
         samples = self.decode(z)
         return samples

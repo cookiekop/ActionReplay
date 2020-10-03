@@ -11,3 +11,14 @@ mkdir datasets models
 - [Python](https://www.python.org/)
 - [PyTorch](https://pytorch.org/)
 - [Matplotlib](https://matplotlib.org/)
+- [Jupyter](https://jupyter.org/)
+
+## Train
+```python
+python pretrain_vae.py
+```
+
+## Evaluate
+```bash
+jupyter notebook vae_experiment.ipynb
+```

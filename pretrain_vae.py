@@ -6,18 +6,18 @@ import torch
 dataset_used = 'MPII'
 device = 'cuda'
 log_interval = 500
-epochs = 50
+epochs = 100
 model = VAE(latent_dim=512).to(device)
 model_name = 'vae_mark'+str(model.mark)+'_'+dataset_used+'.pth'
 train_data_loader, val_data_loader, batch_size, train_size = get_data(dataset_used)
 
 optimizer = optim.Adam([
-    {'params': model.encoder.parameters(), 'lr': 5e-4},
+    {'params': model.encoder.parameters()},
     {'params': model.fc_mu.parameters()},
     {'params': model.fc_logvar.parameters()},
     {'params': model.sampler.parameters()},
     {'params': model.decoder.parameters()}
-], lr=5e-3)
+], lr=1e-3)
 scheduler = optim.lr_scheduler.ExponentialLR(optimizer,
                                              gamma=0.8)
 

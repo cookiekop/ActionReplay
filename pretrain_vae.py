@@ -3,11 +3,12 @@ from data_utils import get_data
 from torch import optim
 import torch
 
-dataset_used = 'MNIST'
+dataset_used = 'MPII'
 device = 'cuda'
 log_interval = 500
-epochs = 2
+epochs = 50
 model = VAE(latent_dim=512).to(device)
+model_name = 'vae_mark'+str(model.mark)+'_'+dataset_used+'.pth'
 train_data_loader, val_data_loader, batch_size, train_size = get_data(dataset_used)
 
 optimizer = optim.Adam([
@@ -34,5 +35,5 @@ for epoch in range(epochs):
         if (i % log_interval == log_interval-1):
             print("RECON Loss: {}, KLD loss:{}".format(float(recon_loss.cpu()), float(kld_loss.cpu())))
     scheduler.step()
-torch.save(model.state_dict(), 'models/vae_mark2.pth')
+torch.save(model.state_dict(), 'models/'+model_name)
 

@@ -13,6 +13,7 @@ class VAE(nn.Module):
         self.fc_hidden1 = 1024
         self.fc_hidden2 = 1024
         self.do_p = 0.3
+        self.mark = 2
 
         # encoding
         pretrained_net = resnet50(pretrained=True, progress=False)

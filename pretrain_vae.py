@@ -6,7 +6,7 @@ import torch
 dataset_used = 'MPII'
 device = 'cuda'
 log_interval = 500
-epochs = 5
+epochs = 50
 batch_size = 32
 model = VAE(latent_dim=512).to(device)
 model_name = 'vae_mark'+str(model.mark)+'_'+dataset_used+'.pth'

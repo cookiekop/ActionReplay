@@ -104,16 +104,17 @@ class GeneralVideoDataset(Dataset):
 
         return sample
 
-def get_data(dataset_used):
+def get_data(dataset_used, batch_size):
     if dataset_used == 'CIFAR10':
         data = CIFAR10('datasets/',
                             train=True,
                             transform=transform,
-                            download=False)
+                            download=True)
     elif dataset_used == 'MNIST':
         data = MNIST('datasets/',
                      train=True,
-                     transform=gray_scale_transform)
+                     transform=gray_scale_transform,
+                     download=True)
     elif dataset_used == 'MPII':
         data = MPIIDataSet('datasets/mpii_human_pose_v1')
 
@@ -122,7 +123,6 @@ def get_data(dataset_used):
     train_size = data_size * 9 // 10
     print("Train size: ", train_size)
     val_size = data_size - train_size
-    batch_size = 32
 
     train_set, val_set = random_split(data, [train_size, val_size])
 

@@ -3,13 +3,14 @@ from data_utils import get_data
 from torch import optim
 import torch
 
-dataset_used = 'MPII'
+dataset_used = 'MNIST'
 device = 'cuda'
 log_interval = 500
-epochs = 100
+epochs = 10
+batch_size = 32
 model = VAE(latent_dim=512).to(device)
 model_name = 'vae_mark'+str(model.mark)+'_'+dataset_used+'.pth'
-train_data_loader, val_data_loader, batch_size, train_size = get_data(dataset_used)
+train_data_loader, val_data_loader, batch_size, train_size = get_data(dataset_used, batch_size)
 
 optimizer = optim.Adam([
     {'params': model.encoder.parameters()},

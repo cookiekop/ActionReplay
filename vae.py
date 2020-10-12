@@ -15,9 +15,9 @@ class VAE(nn.Module):
         self.do_p = 0.3
         self.mark = 2
 
-        # encoding
+        # Encoding
         pretrained_net = resnet50(pretrained=True, progress=False)
-        modules = list(pretrained_net.children())[:-1]  # delete the last fc layer.
+        modules = list(pretrained_net.children())[:-1]
         modules.extend([nn.Flatten(start_dim=1),
                         nn.Linear(pretrained_net.fc.in_features, self.fc_hidden1),
                         nn.BatchNorm1d(self.fc_hidden1, momentum=0.01),
@@ -30,8 +30,8 @@ class VAE(nn.Module):
         self.encoder = nn.Sequential(*modules)
 
         # Latent vectors mu and sigma
-        self.fc_mu = nn.Linear(self.fc_hidden2, self.latent_dim)  # output = CNN embedding latent variables
-        self.fc_logvar = nn.Linear(self.fc_hidden2, self.latent_dim)  # output = CNN embedding latent variables
+        self.fc_mu = nn.Linear(self.fc_hidden2, self.latent_dim)
+        self.fc_logvar = nn.Linear(self.fc_hidden2, self.latent_dim)
 
         # Sampling vector
         modules = [

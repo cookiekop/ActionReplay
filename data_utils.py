@@ -45,7 +45,7 @@ class MPIIDataSet(Dataset):
 
         tensor_image = self.transform(image)
         mask = torch.ones_like(tensor_image)
-        mask[:, tl_[0]:br_[0], tl_[1]:br_[1]] = 5.0
+        mask[:, tl_[0]:br_[0], tl_[1]:br_[1]] = 2.0
         return {'image': tensor_image, 'mask': mask/mask.mean()}
 
 class GeneralVideoDataset(Dataset):
@@ -104,7 +104,7 @@ class GeneralVideoDataset(Dataset):
 
         return sample
 
-def get_data(dataset_used, batch_size):
+def get_data(dataset_used, batch_size, get_mean_std=False):
     if dataset_used == 'CIFAR10':
         data = CIFAR10('datasets/',
                             train=True,
@@ -118,6 +118,26 @@ def get_data(dataset_used, batch_size):
     elif dataset_used == 'MPII':
         data = MPIIDataSet('datasets/mpii_human_pose_v1')
 
+    if get_mean_std:
+        mean = torch.zeros(3)
+        std = torch.zeros(3)
+        print('Computing mean and std...')
+        full_data_loader = DataLoader(data,
+                                      batch_size=batch_size,
+                                      shuffle=False,
+                                      num_workers=os.cpu_count())
+        for idx, batch in enumerate(full_data_loader):
+            if dataset_used == 'MNIST':
+                img, mask = batch[0], None
+            elif dataset_used == 'MPII':
+                img, mask = batch['image'], batch['mask']
+            for i in range(3):
+                mean[i] += img[:, i, :, :].mean()
+                std[i] += img[:, i, :, :].std()
+        mean.div_(idx)
+        std.div_(idx)
+        print(mean, std)
+
     data_size = len(data)
 
     train_size = data_size * 9 // 10
@@ -129,7 +149,7 @@ def get_data(dataset_used, batch_size):
     train_data_loader = DataLoader(train_set,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=4)
+                                   num_workers=os.cpu_count())
     val_data_loader = DataLoader(val_set,
                                  batch_size=1,
                                  shuffle=True,

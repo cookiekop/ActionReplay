@@ -2,26 +2,27 @@ from vae import VAE
 from data_utils import get_data
 from torch import optim
 import torch
+import json
 
 dataset_used = 'MPII'
 device = 'cuda'
 log_interval = 500
-epochs = 50
+epochs = 100
 batch_size = 32
 model = VAE(latent_dim=512).to(device)
-model_name = 'vae_mark'+str(model.mark)+'_'+dataset_used+'.pth'
+model_name = 'vae_mark'+str(model.mark)+'_'+dataset_used
 train_data_loader, val_data_loader, batch_size, train_size = get_data(dataset_used, batch_size, get_mean_std=False)
 
 optimizer = optim.Adam([
-    {'params': model.encoder.parameters()},
+    {'params': model.encoder.parameters(), 'lr': 1e-5},
     {'params': model.fc_mu.parameters()},
     {'params': model.fc_logvar.parameters()},
     {'params': model.sampler.parameters()},
     {'params': model.decoder.parameters()}
 ], lr=1e-3)
 scheduler = optim.lr_scheduler.ExponentialLR(optimizer,
-                                             gamma=0.8)
-
+                                             gamma=0.95)
+losses = []
 for epoch in range(epochs):
     for i, batch in enumerate(train_data_loader):
         if dataset_used == 'MNIST':
@@ -36,5 +37,9 @@ for epoch in range(epochs):
         if (i % log_interval == log_interval-1):
             print("RECON Loss: {}, KLD loss:{}".format(float(recon_loss.cpu()), float(kld_loss.cpu())))
     scheduler.step()
+    losses.append(float(loss.cpu()))
 torch.save(model.state_dict(), 'models/'+model_name)
+with open('logs/'+model_name+'.json', 'w') as f:
+    json.dump(losses, f)
+
 

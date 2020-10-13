@@ -106,8 +106,8 @@ class VAE(nn.Module):
         log_var = args[3]
         kld_weight = kwargs['M_N']
         mask = kwargs['mask']
-        recon_loss = F.binary_cross_entropy(recons, input, weight=mask)
-        kld_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp(), dim=1), dim=0)
+        recon_loss = F.binary_cross_entropy(recons, input, weight=mask, reduction='sum')
+        kld_loss = torch.sum(-0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp(), dim=1), dim=0)
         loss = recon_loss + kld_loss * kld_weight
 
         return loss, recon_loss, kld_loss

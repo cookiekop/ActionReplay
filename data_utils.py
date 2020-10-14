@@ -5,7 +5,6 @@ from PIL import Image
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from skimage.feature import hog
 from torchvision.datasets import CIFAR10, ImageFolder, MNIST
 from torch.utils.data import DataLoader, random_split
 import json
@@ -46,10 +45,9 @@ class MPIIDataSet(Dataset):
         tensor_image = self.transform(image)
         mask = torch.ones_like(tensor_image)
         mask[:, tl_[0]:br_[0], tl_[1]:br_[1]] = 2.0
-        hog_feat, hog_image = hog(tensor_image.squeeze(0).permute(1, 2, 0), visualize=True)
+
         return {'image': tensor_image,
-                'mask': mask/mask.mean(),
-                'hog': torch.tensor(hog_image, dtype=torch.float32).repeat(3, 1, 1)}
+                'mask': mask/mask.mean()}
 
 class GeneralVideoDataset(Dataset):
     """Dataset Class for Loading Video"""

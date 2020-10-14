@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from types_ import *
-from torchvision.models import resnet152, resnet50
+from torchvision.models import resnet101
 
 class VAE(nn.Module):
     def __init__(self,
@@ -19,15 +19,15 @@ class VAE(nn.Module):
         self.std = torch.tensor([0.257, 0.252, 0.253])
 
         # Encoding
-        pretrained_net = resnet50(pretrained=True, progress=False)
+        pretrained_net = resnet101(pretrained=True, progress=False)
         modules = list(pretrained_net.children())[:-1]
         modules.extend([nn.Flatten(start_dim=1),
                         nn.Linear(pretrained_net.fc.in_features, self.fc_hidden1),
-                        nn.BatchNorm1d(self.fc_hidden1, momentum=0.01),
+                        #nn.BatchNorm1d(self.fc_hidden1, momentum=0.01),
                         nn.Dropout(p=self.do_p, inplace=True),
                         nn.ReLU(inplace=True),
                         nn.Linear(self.fc_hidden1, self.fc_hidden2),
-                        nn.BatchNorm1d(self.fc_hidden2, momentum=0.01),
+                        #nn.BatchNorm1d(self.fc_hidden2, momentum=0.01),
                         nn.Dropout(p=self.do_p, inplace=True),
                         nn.ReLU(inplace=True)])
         self.encoder = nn.Sequential(*modules)
@@ -39,36 +39,36 @@ class VAE(nn.Module):
         # Sampling vector
         modules = [
             nn.Linear(self.latent_dim, self.fc_hidden2),
-            nn.BatchNorm1d(self.fc_hidden2),
+            #nn.BatchNorm1d(self.fc_hidden2),
             nn.ReLU(inplace=True),
-            nn.Linear(self.fc_hidden2, 64 * 4 * 4),
-            nn.BatchNorm1d(64 * 4 * 4),
+            nn.Linear(self.fc_hidden2, 256 * 2 * 2),
+            #nn.BatchNorm1d(64 * 4 * 4),
             nn.ReLU(inplace=True)
         ]
         self.sampler = nn.Sequential(*modules)
 
         # Decoder
         modules = [
+            nn.ConvTranspose2d(in_channels=256, out_channels=128, kernel_size=(3, 3), stride=(2, 2)),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(in_channels=128, out_channels=64, kernel_size=(3, 3), stride=(2, 2)),
+            nn.ReLU(inplace=True),
             nn.ConvTranspose2d(in_channels=64, out_channels=32, kernel_size=(3, 3), stride=(2, 2)),
-            nn.BatchNorm2d(32, momentum=0.01),
             nn.ReLU(inplace=True),
             nn.ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=(3, 3), stride=(2, 2)),
-            nn.BatchNorm2d(16, momentum=0.01),
             nn.ReLU(inplace=True),
             nn.ConvTranspose2d(in_channels=16, out_channels=8, kernel_size=(3, 3), stride=(2, 2)),
-            nn.BatchNorm2d(8, momentum=0.01),
             nn.ReLU(inplace=True),
             nn.ConvTranspose2d(in_channels=8, out_channels=3, kernel_size=(3, 3), stride=(2, 2)),
-            nn.BatchNorm2d(3, momentum=0.01),
             nn.Sigmoid()
         ]
         self.decoder = nn.Sequential(*modules)
 
     def encode(self, x):
-        # C = x.shape[1]
-        # for i in range(C):
-        #     x[:, i, :, :] -= self.mean[i]
-        #     x[:, i, :, :] /= self.std[i]
+        C = x.shape[1]
+        for i in range(C):
+            x[:, i, :, :] -= self.mean[i]
+            x[:, i, :, :] /= self.std[i]
         x = self.encoder(x)
 
         mu = self.fc_mu(x)
@@ -77,13 +77,13 @@ class VAE(nn.Module):
         return [mu, log_var]
 
     def decode(self, z):
-        z = self.sampler(z).view(-1, 64, 4, 4)
+        z = self.sampler(z).view(-1, 256, 2, 2)
         z = self.decoder(z)
         z = F.interpolate(z, size=(224, 224), mode='area')
-        # C = z.shape[1]
-        # for i in range(C):
-        #     z[:, i, :, :] *= self.std[i]
-        #     z[:, i, :, :] += self.mean[i]
+        C = z.shape[1]
+        for i in range(C):
+            z[:, i, :, :] *= self.std[i]
+            z[:, i, :, :] += self.mean[i]
         return z
 
     def forward(self, x):

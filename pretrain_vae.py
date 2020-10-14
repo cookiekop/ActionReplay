@@ -28,8 +28,8 @@ for epoch in range(epochs):
         if dataset_used == 'MNIST':
             img, mask = batch[0].to(device), None
         elif dataset_used == 'MPII':
-            img, mask, hog = batch['image'].to(device), batch['mask'].to(device), batch['hog'].to(device)
-        gen = model(hog)
+            img, mask = batch['image'].to(device), batch['mask'].to(device)
+        gen = model(img)
         loss, recon_loss, kld_loss = model.loss_function(*gen, M_N=batch_size/train_size, mask=mask)
         optimizer.zero_grad()
         loss.backward()

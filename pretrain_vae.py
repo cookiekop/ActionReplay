@@ -6,8 +6,8 @@ import json
 
 dataset_used = 'UTD'
 device = 'cuda'
-log_interval = 500
-epochs = 5
+log_interval = 100
+epochs = 10
 batch_size = 32
 model = VAE(latent_dim=512).to(device)
 model_name = 'vae_mark'+str(model.mark)+'_'+dataset_used

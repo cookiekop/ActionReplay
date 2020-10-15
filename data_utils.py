@@ -163,7 +163,7 @@ def get_data(dataset_used, batch_size, get_mean_std=False):
     return train_data_loader, val_data_loader, batch_size, train_size
 
 def utd2image(rootdir):
-    frame_interval = 5
+    frame_interval = 2
     count = 0
     if not os.path.exists(rootdir+'/Image/'):
         os.makedirs(rootdir+'/Image/')
@@ -178,3 +178,5 @@ def utd2image(rootdir):
                 imsave(rootdir+'/Image/'+action+'/'+str(count)+'.png', frame, cmap='gray')
                 count += 1
     print('Total Image Num:{}'.format(count))
+
+# utd2image('datasets/UTD-MHAD')

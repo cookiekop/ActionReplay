@@ -8,6 +8,8 @@ from torch.utils.data import Dataset
 from torchvision.datasets import CIFAR10, ImageFolder, MNIST
 from torch.utils.data import DataLoader, random_split
 import json
+from scipy.io import loadmat
+from matplotlib.image import imsave
 
 video_extensions = ['.avi', '.mpg']
 image_extensions = ['.jpg']
@@ -118,6 +120,9 @@ def get_data(dataset_used, batch_size, get_mean_std=False):
                      download=True)
     elif dataset_used == 'MPII':
         data = MPIIDataSet('datasets/mpii_human_pose_v1')
+    elif dataset_used == 'UTD':
+        data = ImageFolder('datasets/UTD-MHAD/Image/',
+                           transform=transform)
 
     if get_mean_std:
         mean = torch.zeros(3)
@@ -156,3 +161,20 @@ def get_data(dataset_used, batch_size, get_mean_std=False):
                                  shuffle=True,
                                  num_workers=0)
     return train_data_loader, val_data_loader, batch_size, train_size
+
+def utd2image(rootdir):
+    frame_interval = 5
+    count = 0
+    if not os.path.exists(rootdir+'/Image/'):
+        os.makedirs(rootdir+'/Image/')
+    for root, dirs, files in os.walk(rootdir+'/Depth/'):
+        for name in files:
+            action = name.split('_')[0]
+            if not os.path.exists(rootdir + '/Image/'+action):
+                os.makedirs(rootdir + '/Image/'+action)
+            mat = loadmat(root+name)['d_depth'].transpose(2, 0, 1)
+            for i in range(0, mat.shape[0], frame_interval):
+                frame = mat[i]
+                imsave(rootdir+'/Image/'+action+'/'+str(count)+'.png', frame, cmap='gray')
+                count += 1
+    print('Total Image Num:{}'.format(count))

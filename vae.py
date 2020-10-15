@@ -118,24 +118,40 @@ class VAE(nn.Module):
 
 class ActionVAE(VAE):
     def __init__(self,
-                 in_channels: int,
-                 latent_dim: int,
-                 sequence_length: int,
-                 hidden_dims: List = None):
-        super(ActionVAE, self).__init__(in_channels=in_channels,
-                                        latent_dim=latent_dim)
+                 VAEmodel,
+                 **kwargs):
+        super(ActionVAE, self).__init__(latent_dim=VAEmodel.latent_dim)
+        self.mark = 0
+        self.VAE = VAEmodel
 
-        pretrain_resnet = resnet152(pretrained=True)
-        modules = list(pretrain_resnet.children())[:-1]
-        for param in self.encoder.parameters():
-            param.requires_grad = False
+    def forward(self, x):
+        B, F, C, W, H = x.shape
+        zs = torch.zeros_like(x)
+        mus = torch.zeros([B, F, self.latent_dim], dtype=x.dtype, device=x.device)
+        log_vars = torch.zeros([B, F, self.latent_dim], dtype=x.dtype, device=x.device)
+
+        for i in range(F):
+            frame = x[:, i, :, :, :]
+            z, _, mu, log_var = self.VAE(frame)
+            zs[:, i] = z
+            mus[:, i] = mu
+            log_vars[:, i] = log_var
+
+        return [zs, x, mus, log_vars]
+
+class ActionVAE_LSTM(VAE):
+    def __init__(self,
+                 latent_dim: int,
+                 sequence_length: int):
+        super(ActionVAE_LSTM, self).__init__(latent_dim=latent_dim)
+        self.mark = 0
 
         self.sequence_length = sequence_length
         self.rnn = nn.LSTM(input_size=latent_dim,
-                          hidden_size=latent_dim,
-                          num_layers=3,
-                          dropout=0.3,
-                          batch_first=True)
+                           hidden_size=latent_dim,
+                           num_layers=3,
+                           dropout=self.do_p,
+                           batch_first=True)
 
     def forward(self, input: Tensor, **kwargs) -> List[Tensor]:
         frame_num = input.shape[1]

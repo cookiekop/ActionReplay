@@ -51,6 +51,34 @@ class MPIIDataSet(Dataset):
         return {'image': tensor_image,
                 'mask': mask/mask.mean()}
 
+class UTDVideo(Dataset):
+    def __init__(self, dir, transform=transform):
+        self.dir = dir
+        self.files = []
+        for root, dirs, files in os.walk(self.dir):
+            for name in files:
+                self.files.append(name)
+        self.transform = gray_scale_transform
+
+    def __len__(self):
+        return len(self.files)
+
+    def __getitem__(self, idx):
+        file = self.files[idx]
+        action = file.split('_')[0]
+        action_class = int(action[1:])
+        mat = loadmat(self.dir + file)['d_depth'].transpose(2, 0, 1)
+        frame_num = mat.shape[0]
+        frames = torch.zeros([frame_num, 3, 224, 224])
+        for i in range(frame_num):
+            frame = mat[i]
+            pil_img = Image.fromarray(frame).convert('L')
+            frame = self.transform(pil_img)
+            frames[i] = frame
+
+        return {'clip': frames,
+                'label': action_class}
+
 class GeneralVideoDataset(Dataset):
     """Dataset Class for Loading Video"""
 
@@ -123,6 +151,9 @@ def get_data(dataset_used, batch_size, get_mean_std=False):
     elif dataset_used == 'UTD':
         data = ImageFolder('datasets/UTD-MHAD/Image/',
                            transform=transform)
+    elif dataset_used == 'UTDVideo':
+        data = UTDVideo('datasets/UTD-MHAD/Depth/',
+                        transform=transform)
 
     if get_mean_std:
         mean = torch.zeros(3)
@@ -160,7 +191,7 @@ def get_data(dataset_used, batch_size, get_mean_std=False):
                                  batch_size=1,
                                  shuffle=True,
                                  num_workers=0)
-    return train_data_loader, val_data_loader, batch_size, train_size
+    return train_data_loader, val_data_loader, train_size
 
 def utd2image(rootdir):
     frame_interval = 2

@@ -11,7 +11,7 @@ epochs = 10
 batch_size = 32
 model = VAE(latent_dim=512).to(device)
 model_name = 'vae_mark'+str(model.mark)+'_'+dataset_used
-train_data_loader, val_data_loader, batch_size, train_size = get_data(dataset_used, batch_size, get_mean_std=False)
+train_data_loader, val_data_loader, train_size = get_data(dataset_used, batch_size, get_mean_std=False)
 
 optimizer = optim.Adam([
     {'params': model.encoder.parameters()},

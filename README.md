@@ -14,12 +14,24 @@ mkdir datasets models logs
 - [Matplotlib](https://matplotlib.org/)
 - [Jupyter](https://jupyter.org/)
 
+### Datasets
+- [**UTD-MHAD**](https://personal.utdallas.edu/~kehtar/UTD-MHAD.html)
+Using the depth files to get rid of background, since it's very hard to train VAE for noisy environment.
+
+## Approach
+A VAE(pretrained on images)+RNN model.
+
+## Current Result
+![](results/ezgif-3-fe28c35930e3.gif)
+
 ## Train
 ```bash
 python pretrain_vae.py
+python train.py
 ```
 
 ## Evaluate
 ```bash
-jupyter notebook vae_experiment.ipynb
+jupyter notebook vae_evaluate.ipynb
+jupyter notebook actionvae_evaluate.ipynb
 ```

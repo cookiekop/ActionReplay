@@ -108,11 +108,9 @@ class VAE(nn.Module):
 
         return loss, recon_loss, kld_loss
 
-    def sample(self,
-               num_samples:int,
-               current_device: int, **kwargs):
-        z = torch.randn(num_samples, self.latent_dim)
-        z = z.to(current_device)
+    def sample(self):
+        z = torch.randn(1, self.latent_dim)
+        z = z.to(next(self.parameters()).device)
         samples = self.decode(z)
         return samples
 
@@ -123,103 +121,86 @@ class ActionVAE(VAE):
         super(ActionVAE, self).__init__(latent_dim=VAEmodel.latent_dim)
         self.mark = 0
         self.VAE = VAEmodel
+        self.encoder = VAEmodel.encoder
+        self.sampler = VAEmodel.sampler
+        self.fc_mu = VAEmodel.fc_mu
+        self.fc_logvar = VAEmodel.fc_logvar
+        self.decoder = VAEmodel.decoder
+
+        self.recurrency = kwargs.get('recurrency', None)
+        self.seq_length = kwargs.get('seq_length', 5)
+        if self.recurrency == 'rnn':
+            self.rnn = nn.RNN(input_size=self.latent_dim,
+                              hidden_size=self.latent_dim,
+                              num_layers=3,
+                              nonlinearity='relu',
+                              dropout=self.do_p,
+                              batch_first=True)
+        elif self.recurrency == 'lstm':
+            self.rnn = nn.LSTM(input_size=self.latent_dim,
+                               hidden_size=self.latent_dim,
+                               num_layers=3,
+                               dropout=self.do_p,
+                               batch_first=True)
 
     def forward(self, x):
         B, F, C, W, H = x.shape
         zs = torch.zeros_like(x)
         mus = torch.zeros([B, F, self.latent_dim], dtype=x.dtype, device=x.device)
         log_vars = torch.zeros([B, F, self.latent_dim], dtype=x.dtype, device=x.device)
+        if self.recurrency == 'rnn':
+            states = None
+        elif self.recurrency == 'lstm':
+            states = (None, None)
+        seq_count = 0
+        seq = torch.zeros([B, self.seq_length, self.latent_dim], dtype=x.dtype, device=x.device)
 
         for i in range(F):
-            frame = x[:, i, :, :, :]
-            z, _, mu, log_var = self.VAE(frame)
-            zs[:, i] = z
+            frame = x[:, i]
+            if self.recurrency == None:
+                z, _, mu, log_var = super(ActionVAE, self).forward(frame)
+                zs[:, i] = z
+            else:
+                mu, log_var = self.encode(frame)
+                latent = self.reparameterize(mu, log_var)
+                seq[:, seq_count] = latent
+                seq_count += 1
+                if seq_count == self.seq_length or i == F-1:
+                    gen_seq, states = self.decodeSeq(*[seq.clone(), states])
+                    zs[:, i + 1 - self.seq_length:i+1] = gen_seq
+                    seq_count = 0
+
             mus[:, i] = mu
             log_vars[:, i] = log_var
 
         return [zs, x, mus, log_vars]
 
-class ActionVAE_LSTM(VAE):
-    def __init__(self,
-                 latent_dim: int,
-                 sequence_length: int):
-        super(ActionVAE_LSTM, self).__init__(latent_dim=latent_dim)
-        self.mark = 0
-
-        self.sequence_length = sequence_length
-        self.rnn = nn.LSTM(input_size=latent_dim,
-                           hidden_size=latent_dim,
-                           num_layers=3,
-                           dropout=self.do_p,
-                           batch_first=True)
-
-    def forward(self, input: Tensor, **kwargs) -> List[Tensor]:
-        frame_num = input.shape[1]
-        frame_0 = input[:, 0]
-        mu, log_var = self.encode(frame_0)
-        mus, log_vars = mu.unsqueeze(1), log_var.unsqueeze(1)
-        zs = self.reparameterize(mu, log_var).unsqueeze(1)
+    def decodeSeq(self, *args):
+        seq = args[0]
+        states = args[1]
         gen_frames = None
-        hn = None
-        cn = None
-
-        for frame_idx in range(1, frame_num):
-            batch_frame = input[:, frame_idx]
-            mu, log_var = self.encode(batch_frame)
-            mus, log_vars = torch.cat((mus, mu.unsqueeze(1)), 1), torch.cat((log_vars, log_var.unsqueeze(1)), 1)
-            z = self.reparameterize(mu, log_var).unsqueeze(1)
-            if (zs.shape[1] < self.sequence_length):
-                zs = torch.cat((zs, z), 1)
-            else:
-                dec_frames, hn, cn = self.decodeVideo(hn, cn, zs)
-                if gen_frames == None:
-                    gen_frames = dec_frames
-                else:
-                    gen_frames = torch.cat((gen_frames, dec_frames), 1)
-                zs = z
-            if (frame_idx == frame_num - 1):
-                dec_frames = self.decodeVideo(hn, cn, zs)[0]
-                if gen_frames == None:
-                    gen_frames = dec_frames
-                else:
-                    gen_frames = torch.cat((gen_frames, dec_frames), 1)
-
-        return [gen_frames, input, mus, log_vars]
-
-    def decodeVideo(self, hn: Tensor, cn: Tensor, zs: Tensor) -> Tensor:
-        gen_frames = None
-        if hn == None or cn == None:
-            zs, (hn, cn) = self.rnn(zs)
+        if type(states) is tuple and states[0] == None:
+            output, states = self.rnn(seq)
         else:
-            zs, (hn, cn) = self.rnn(zs, (hn, cn))
-        for seq_idx in range(zs.shape[1]):
-            z = zs[:, seq_idx]
+            output, states = self.rnn(seq, states)
+        for seq_idx in range(output.shape[1]):
+            z = output[:, seq_idx]
             gen_frame = self.decode(z)
             if gen_frames == None:
                 gen_frames = gen_frame.unsqueeze(1)
             else:
                 gen_frames = torch.cat((gen_frames, gen_frame.unsqueeze(1)), 1)
-        return gen_frames, hn, cn
+        return gen_frames, states
 
-    def loss_function(self,
-                      *args,
-                      **kwargs) -> dict:
+    def loss_function(self, *args, **kwargs):
         recons = args[0]
         input = args[1]
         mus = args[2]
         log_vars = args[3]
 
-        kld_weight = kwargs['M_N']  # Account for the minibatch samples from the dataset
-        input = F.interpolate(input, size=[3, 96, 96], mode="area")
+        kld_weight = kwargs['M_N']
+        recon_loss = F.binary_cross_entropy(recons, input, reduction='sum')
+        kld_loss = torch.sum(-0.5 * torch.sum(1 + log_vars - mus.pow(2) - log_vars.exp(), dim=2))
+        loss = recon_loss + kld_loss * kld_weight
 
-        recons_loss = F.binary_cross_entropy_with_logits(recons, input)
-
-        kld_loss = torch.mean(-0.5 * torch.sum(1 + log_vars - mus ** 2 - log_vars.exp(), dim=2))
-
-        loss = recons_loss + kld_weight * kld_loss
-        return {'loss': loss, 'Reconstruction_Loss': recons_loss, 'KLD': -kld_loss}
-
-    def generate(self, x: Tensor, **kwargs) -> Tensor:
-        return self.forward(x)[0]
-
-
+        return loss, recon_loss, kld_loss

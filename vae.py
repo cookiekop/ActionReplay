@@ -166,7 +166,7 @@ class ActionVAE(VAE):
                 seq[:, seq_count] = latent
                 seq_count += 1
                 if seq_count == self.seq_length or i == F-1:
-                    gen_seq, states = self.decodeSeq(*[seq.clone(), states])
+                    gen_seq, states, _ = self.decodeSeq(*[seq.clone(), states])
                     zs[:, i + 1 - self.seq_length:i+1] = gen_seq
                     seq_count = 0
 
@@ -190,7 +190,7 @@ class ActionVAE(VAE):
                 gen_frames = gen_frame.unsqueeze(1)
             else:
                 gen_frames = torch.cat((gen_frames, gen_frame.unsqueeze(1)), 1)
-        return gen_frames, states
+        return gen_frames, states, output
 
     def loss_function(self, *args, **kwargs):
         recons = args[0]
@@ -204,3 +204,36 @@ class ActionVAE(VAE):
         loss = recon_loss + kld_loss * kld_weight
 
         return loss, recon_loss, kld_loss
+
+    def sampleVid(self, frame_num):
+        z = torch.randn(self.seq_length, self.latent_dim).unsqueeze(0)
+        z = z.to(next(self.parameters()).device)
+        if self.recurrency == 'rnn':
+            states = None
+        elif self.recurrency == 'lstm':
+            states = (None, None)
+        gen_frames = None
+        seq_count = 0
+        while (1):
+            if self.recurrency == None:
+                gen_frame = super(ActionVAE, self).decode(z[:, seq_count])
+                if gen_frames == None:
+                    gen_frames = gen_frame.unsqueeze(1)
+                else:
+                    gen_frames = torch.cat((gen_frames, gen_frame.unsqueeze(1)), 1)
+                seq_count += 1
+                if seq_count == self.seq_length:
+                    z = torch.randn(self.seq_length, self.latent_dim).unsqueeze(0)
+                    z = z.to(next(self.parameters()).device)
+                    seq_count = 0
+            else:
+                gen_frame, states, z = self.decodeSeq(*[z.clone(), states])
+                if gen_frames == None:
+                    gen_frames = gen_frame
+                else:
+                    gen_frames = torch.cat((gen_frames, gen_frame), 1)
+
+            if (gen_frames.shape[1] >= frame_num):
+                break
+
+        return gen_frames

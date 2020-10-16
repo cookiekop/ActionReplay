@@ -52,9 +52,10 @@ class MPIIDataSet(Dataset):
                 'mask': mask/mask.mean()}
 
 class UTDVideo(Dataset):
-    def __init__(self, dir, transform=transform):
+    def __init__(self, dir):
         self.dir = dir
         self.files = []
+        self.max_frame = 40
         for root, dirs, files in os.walk(self.dir):
             for name in files:
                 self.files.append(name)
@@ -69,9 +70,11 @@ class UTDVideo(Dataset):
         action_class = int(action[1:])
         mat = loadmat(self.dir + file)['d_depth'].transpose(2, 0, 1)
         frame_num = mat.shape[0]
+        clip = mat[frame_num//2 - self.max_frame//2: frame_num//2 + self.max_frame//2]
+        frame_num = clip.shape[0]
         frames = torch.zeros([frame_num, 3, 224, 224])
         for i in range(frame_num):
-            frame = mat[i]
+            frame = clip[i]
             pil_img = Image.fromarray(frame).convert('L')
             frame = self.transform(pil_img)
             frames[i] = frame
@@ -86,7 +89,6 @@ class GeneralVideoDataset(Dataset):
         self,
         dir,
         channels=3,
-        transform=transform,
     ):
 
         self.clips_list = []
@@ -152,8 +154,7 @@ def get_data(dataset_used, batch_size, get_mean_std=False):
         data = ImageFolder('datasets/UTD-MHAD/Image/',
                            transform=transform)
     elif dataset_used == 'UTDVideo':
-        data = UTDVideo('datasets/UTD-MHAD/Depth/',
-                        transform=transform)
+        data = UTDVideo('datasets/UTD-MHAD/Depth/')
 
     if get_mean_std:
         mean = torch.zeros(3)

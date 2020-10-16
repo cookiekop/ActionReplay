@@ -22,7 +22,8 @@ Using the depth files to get rid of background, since it's very hard to train VA
 A VAE(pretrained on images)+RNN model.
 
 ## Current Result
-![](results/ezgif-3-fe28c35930e3.gif)
+![](results/sample.gif)
+![](results/gen.gif)
 
 ## Train
 ```bash

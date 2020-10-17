@@ -132,7 +132,7 @@ class ActionVAE(VAE):
         if self.recurrency == 'rnn':
             self.rnn = nn.RNN(input_size=self.latent_dim,
                               hidden_size=self.latent_dim,
-                              num_layers=3,
+                              num_layers=self.seq_length,
                               nonlinearity='relu',
                               dropout=self.do_p,
                               batch_first=True)

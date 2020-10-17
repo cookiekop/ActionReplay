@@ -16,13 +16,16 @@ mkdir datasets models logs
 
 ### Datasets
 - [**UTD-MHAD**](https://personal.utdallas.edu/~kehtar/UTD-MHAD.html)
-Using the depth files to get rid of background, since it's very hard to train VAE for noisy environment.
+Using the depth files to get rid of background.
+- [MPII](http://human-pose.mpi-inf.mpg.de/)
+Very hard to train VAE for noisy environment.
 
 ## Approach
 A VAE(pretrained on images)+RNN model.
 
 ## Current Result
-![](results/ezgif-3-fe28c35930e3.gif)
+![](results/sample.gif)
+![](results/gen.gif)
 
 ## Train
 ```bash

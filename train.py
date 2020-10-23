@@ -17,7 +17,7 @@ VAEmodel = VAE(latent_dim=512).to(device)
 VAEmodel_name = 'vae_mark'+str(VAEmodel.mark)+'_UTD'
 VAEmodel.load_state_dict(torch.load('models/'+VAEmodel_name+'.pth'))
 
-recurrency = 'lstm'
+recurrency = 'rnn'
 seq_length = 5
 model = ActionVAE(VAEmodel, recurrency=recurrency, seq_length=seq_length).to(device)
 model_name = 'actionvae_'+recurrency+'_mark'+str(model.mark)+'_'+dataset_used
@@ -28,7 +28,7 @@ optimizer = optim.Adam([
     # {'params': model.fc_logvar.parameters()},
     # {'params': model.sampler.parameters()},
     # {'params': model.decoder.parameters()},
-    {'params': model.rnn.parameters(), 'lr': 1e-3}
+    {'params': model.rnn.parameters(), 'lr': 1e-4}
 ])
 scheduler = optim.lr_scheduler.ExponentialLR(optimizer,
                                              gamma=0.95)

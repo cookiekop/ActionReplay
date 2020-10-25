@@ -4,10 +4,10 @@ from torch import optim
 import torch
 import json
 
-dataset_used = 'UTD'
+dataset_used = 'CIFAR10'
 device = 'cuda'
 log_interval = 100
-epochs = 10
+epochs = 5
 batch_size = 32
 model = VAE(latent_dim=512).to(device)
 model_name = 'vae_mark'+str(model.mark)+'_'+dataset_used
@@ -25,7 +25,7 @@ scheduler = optim.lr_scheduler.ExponentialLR(optimizer,
 losses = []
 for epoch in range(epochs):
     for i, batch in enumerate(train_data_loader):
-        if dataset_used in ['MNIST', 'UTD']:
+        if dataset_used in ['MNIST', 'UTD', 'FashionMNIST', 'CIFAR10']:
             img, mask = batch[0].to(device), None
         elif dataset_used == 'MPII':
             img, mask = batch['image'].to(device), batch['mask'].to(device)

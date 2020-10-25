@@ -13,7 +13,7 @@ class VAE(nn.Module):
         self.fc_hidden1 = 1024
         self.fc_hidden2 = 1024
         self.do_p = 0.2
-        self.mark = 3
+        self.mark = 2 # mark number for different stage of the project
 
         self.mean = torch.tensor([0.467, 0.445, 0.407])
         self.std = torch.tensor([0.257, 0.252, 0.253])
@@ -102,8 +102,9 @@ class VAE(nn.Module):
         log_var = args[3]
         kld_weight = kwargs['M_N']
         mask = kwargs['mask']
-        recon_loss = F.binary_cross_entropy(recons, input, weight=mask, reduction='sum')
-        kld_loss = torch.sum(-0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp(), dim=1), dim=0)
+        # recon_loss = F.binary_cross_entropy(recons, input, weight=mask, reduction='mean')
+        recon_loss = F.mse_loss(recons, input)
+        kld_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp(), dim=1), dim=0)
         loss = recon_loss + kld_loss * kld_weight
 
         return loss, recon_loss, kld_loss

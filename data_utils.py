@@ -5,7 +5,7 @@ from PIL import Image
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from torchvision.datasets import CIFAR10, ImageFolder, MNIST
+from torchvision.datasets import CIFAR10, ImageFolder, MNIST, FashionMNIST
 from torch.utils.data import DataLoader, random_split
 import json
 from scipy.io import loadmat
@@ -148,6 +148,11 @@ def get_data(dataset_used, batch_size, get_mean_std=False):
                      train=True,
                      transform=gray_scale_transform,
                      download=True)
+    elif dataset_used == 'FashionMNIST':
+        data = FashionMNIST('datasets/',
+                            train=True,
+                            transform=gray_scale_transform,
+                            download=True)
     elif dataset_used == 'MPII':
         data = MPIIDataSet('datasets/mpii_human_pose_v1')
     elif dataset_used == 'UTD':

@@ -11,7 +11,7 @@ class VAE(nn.Module):
         super(VAE, self).__init__()
         self.latent_dim = latent_dim
         self.fc_hidden1 = 1024
-        self.fc_hidden2 = 1024
+        self.fc_hidden2 = 512 #1024
         self.do_p = 0.2
         self.mark = 2 # mark number for different stage of the project
 
@@ -41,14 +41,13 @@ class VAE(nn.Module):
             nn.Linear(self.latent_dim, self.fc_hidden2),
             #nn.BatchNorm1d(self.fc_hidden2),
             nn.ReLU(inplace=True),
-            nn.Linear(self.fc_hidden2, 64 * 4 * 4),
-            #nn.BatchNorm1d(64 * 4 * 4),
-            nn.ReLU(inplace=True)
         ]
         self.sampler = nn.Sequential(*modules)
 
         # Decoder
         modules = [
+            nn.ConvTranspose2d(in_channels=128, out_channels=64, kernel_size=(3, 3), stride=(2, 2)),
+            nn.ReLU(inplace=True),
             nn.ConvTranspose2d(in_channels=64, out_channels=32, kernel_size=(3, 3), stride=(2, 2)),
             nn.ReLU(inplace=True),
             nn.ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=(3, 3), stride=(2, 2)),
@@ -73,7 +72,7 @@ class VAE(nn.Module):
         return [mu, log_var]
 
     def decode(self, z):
-        z = self.sampler(z).view(-1, 64, 4, 4)
+        z = self.sampler(z).view(-1, 128, 2, 2)
         z = self.decoder(z)
         z = F.interpolate(z, size=(224, 224), mode='area')
         # C = z.shape[1]
@@ -102,8 +101,8 @@ class VAE(nn.Module):
         log_var = args[3]
         kld_weight = kwargs['M_N']
         mask = kwargs['mask']
-        # recon_loss = F.binary_cross_entropy(recons, input, weight=mask, reduction='mean')
-        recon_loss = F.mse_loss(recons, input)
+        recon_loss = F.binary_cross_entropy(recons, input, weight=mask, reduction='mean')
+        # recon_loss = F.mse_loss(recons, input)
         kld_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp(), dim=1), dim=0)
         loss = recon_loss + kld_loss * kld_weight
 

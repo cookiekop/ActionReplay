@@ -4,12 +4,12 @@ from torch import optim
 import torch
 import json
 
-dataset_used = 'CIFAR10'
+dataset_used = 'MNIST'
 device = 'cuda'
 log_interval = 100
 epochs = 5
 batch_size = 32
-model = VAE(latent_dim=512).to(device)
+model = VAE(latent_dim=64).to(device)
 model_name = 'vae_mark'+str(model.mark)+'_'+dataset_used
 train_data_loader, val_data_loader, train_size = get_data(dataset_used, batch_size, get_mean_std=False)
 

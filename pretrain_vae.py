@@ -10,7 +10,7 @@ log_interval = 100
 epochs = 5
 batch_size = 32
 
-model = VAE(latent_dim=100).to(device)
+model = VAE(latent_dim=128).to(device)
 model_name = 'vae_mark'+str(model.mark)+'_'+dataset_used+'_'+str(class_num)
 if class_num > 1:
     last_model_name = 'vae_mark'+str(model.mark)+'_'+dataset_used+'_'+str(class_num-1)
@@ -38,7 +38,7 @@ for epoch in range(epochs):
             img, mask = batch['image'].to(device), batch['mask'].to(device)
 
         gen = model(img)
-        loss, recon_loss, kld_loss = model.loss_function(*gen, M_N=batch_size/train_size, mask=mask)
+        loss, recon_loss, kld_loss = model.loss_function(*gen, N=train_size, mask=mask)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()

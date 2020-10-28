@@ -137,7 +137,7 @@ class GeneralVideoDataset(Dataset):
 
         return sample
 
-class_num = 0 # 0 for whole dataset learning, 1-5 for 5 class-inc learning
+class_num = 3 # 0 for whole dataset learning, 1-5 for 5 class-inc learning
 def train_collate(batch):
     data = None
     target = []

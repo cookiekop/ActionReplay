@@ -137,6 +137,36 @@ class GeneralVideoDataset(Dataset):
 
         return sample
 
+class_num = 0 # 0 for whole dataset learning, 1-5 for 5 class-inc learning
+def train_collate(batch):
+    data = None
+    target = []
+    for item in batch:
+        if item[1] < (class_num-1)*2:
+            continue
+        if item[1] >= class_num*2:
+            continue
+        if data is None:
+            data = item[0].unsqueeze(0)
+        else:
+            data = torch.cat((data, item[0].unsqueeze(0)), 0)
+        target.append(item[1])
+    return [data, torch.LongTensor(target)]
+
+
+def val_collate(batch):
+    data = None
+    target = []
+    for item in batch:
+        if item[1] >= class_num*2:
+            continue
+        if data is None:
+            data = item[0].unsqueeze(0)
+        else:
+            data = torch.cat((data, item[0].unsqueeze(0)), 0)
+        target.append(item[1])
+    return [data, torch.LongTensor(target)]
+
 def get_data(dataset_used, batch_size, get_mean_std=False):
     if dataset_used == 'CIFAR10':
         data = CIFAR10('datasets/',
@@ -189,14 +219,18 @@ def get_data(dataset_used, batch_size, get_mean_std=False):
 
     train_set, val_set = random_split(data, [train_size, val_size])
 
+    train_collate_func = None if class_num == 0 else train_collate
+    val_collate_func = None if class_num == 0 else val_collate
     train_data_loader = DataLoader(train_set,
                                    batch_size=batch_size,
                                    shuffle=True,
-                                   num_workers=os.cpu_count())
+                                   num_workers=os.cpu_count(),
+                                   collate_fn=train_collate_func)
     val_data_loader = DataLoader(val_set,
                                  batch_size=1,
                                  shuffle=True,
-                                 num_workers=0)
+                                 num_workers=0,
+                                 collate_fn=val_collate_func)
     return train_data_loader, val_data_loader, train_size
 
 def utd2image(rootdir):

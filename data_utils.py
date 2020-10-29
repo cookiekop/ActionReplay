@@ -137,14 +137,14 @@ class GeneralVideoDataset(Dataset):
 
         return sample
 
-class_num = 3 # 0 for whole dataset learning, 1-5 for 5 class-inc learning
+session_num = 5 # 0 for whole dataset learning, 1-5 for 5 class-inc learning
 def train_collate(batch):
     data = None
     target = []
     for item in batch:
-        if item[1] < (class_num-1)*2:
+        if item[1] < (session_num-1)*2:
             continue
-        if item[1] >= class_num*2:
+        if item[1] >= session_num*2:
             continue
         if data is None:
             data = item[0].unsqueeze(0)
@@ -153,12 +153,11 @@ def train_collate(batch):
         target.append(item[1])
     return [data, torch.LongTensor(target)]
 
-
 def val_collate(batch):
     data = None
     target = []
     for item in batch:
-        if item[1] >= class_num*2:
+        if item[1] >= session_num*2:
             continue
         if data is None:
             data = item[0].unsqueeze(0)
@@ -219,8 +218,8 @@ def get_data(dataset_used, batch_size, get_mean_std=False):
 
     train_set, val_set = random_split(data, [train_size, val_size])
 
-    train_collate_func = None if class_num == 0 else train_collate
-    val_collate_func = None if class_num == 0 else val_collate
+    train_collate_func = None if session_num == 0 else train_collate
+    val_collate_func = None if session_num == 0 else val_collate
     train_data_loader = DataLoader(train_set,
                                    batch_size=batch_size,
                                    shuffle=True,

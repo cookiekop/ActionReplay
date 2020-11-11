@@ -95,22 +95,34 @@ class VAE(nn.Module):
             return mu
 
     def loss_function(self, *args, **kwargs):
-        recons = args[0]
-        input = args[1]
-        mu = args[2]
-        log_var = args[3]
+        recons, input, mu, log_var = args
         B = input.shape[0]
         N = kwargs['N']
-        mask = kwargs['mask']
-        recon_loss = F.binary_cross_entropy(recons, input, weight=mask, reduction='mean')
+        recon_loss = F.binary_cross_entropy(recons, input.detach(), reduction='mean')
         # recon_loss = F.mse_loss(recons, input)
         kld_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp(), dim=1), dim=0)
         loss = recon_loss + kld_loss * B / N
 
         return loss, recon_loss, kld_loss
 
-    def sample(self):
-        z = torch.randn(1, self.latent_dim)
+    def gr_loss_function(self, session_num, *args, **kwargs):
+        if session_num < 2:
+            return self.loss_function(*args, **kwargs)[0]
+        recons, input, mu, log_var = args
+        B = input.shape[0]
+        N = kwargs['N']
+        input = input.detach()
+        recon_loss_c = F.binary_cross_entropy(recons[:B//2], input[:B//2], reduction='mean')
+        kld_loss_c = torch.mean(-0.5 * torch.sum(1 + log_var[:B//2] - mu[:B//2].pow(2) - log_var[:B//2].exp(), dim=1), dim=0)
+        loss_c = recon_loss_c + kld_loss_c * B / N
+
+        recon_loss_r = F.binary_cross_entropy(recons[B//2:], input[B//2:], reduction='mean')
+        kld_loss_r = torch.mean(-0.5 * torch.sum(1 + log_var[B//2:] - mu[B//2:].pow(2) - log_var[B//2:].exp(), dim=1), dim=0)
+        loss_r = recon_loss_r + kld_loss_r * B / N
+        return loss_c / session_num + (1 - 1 / session_num) * loss_r
+
+    def sample(self, sample_num=1):
+        z = torch.randn(sample_num, self.latent_dim)
         z = z.to(next(self.parameters()).device)
         samples = self.decode(z)
         return samples
@@ -238,3 +250,103 @@ class ActionVAE(VAE):
                 break
 
         return gen_frames
+
+class MNIST_VAE(nn.Module):
+    def __init__(self,
+                 latent_dim: int,
+                 **kwargs) -> None:
+        super(MNIST_VAE, self).__init__()
+        self.latent_dim = latent_dim
+        self.fc_hidden1 = 512
+        self.fc_hidden2 = 512
+
+        # Encoding
+        modules = [nn.Flatten(start_dim=1),
+                   nn.Linear(784, self.fc_hidden1),
+                   nn.BatchNorm1d(self.fc_hidden1, momentum=0.01),
+                   nn.ReLU(inplace=True),
+                   nn.Linear(self.fc_hidden1, self.fc_hidden2),
+                   nn.BatchNorm1d(self.fc_hidden2, momentum=0.01),
+                   nn.ReLU(inplace=True)]
+        self.encoder = nn.Sequential(*modules)
+
+        # Latent vectors mu and sigma
+        self.fc_mu = nn.Linear(self.fc_hidden2, self.latent_dim)
+        self.fc_logvar = nn.Linear(self.fc_hidden2, self.latent_dim)
+
+        # Sampling vector
+        modules = [
+            nn.Linear(self.latent_dim, self.fc_hidden2),
+            nn.BatchNorm1d(self.fc_hidden2),
+            nn.ReLU(inplace=True),
+        ]
+        self.sampler = nn.Sequential(*modules)
+
+        # Decoder
+        modules = [
+            nn.Linear(self.latent_dim, self.fc_hidden2),
+            nn.BatchNorm1d(self.fc_hidden2, momentum=0.01),
+            nn.ReLU(inplace=True),
+            nn.Linear(self.fc_hidden2, self.fc_hidden1),
+            nn.BatchNorm1d(self.fc_hidden1, momentum=0.01),
+            nn.ReLU(inplace=True),
+            nn.Linear(self.fc_hidden1, 784),
+            nn.Sigmoid()
+        ]
+        self.decoder = nn.Sequential(*modules)
+
+    def encode(self, x):
+        x = self.encoder(x)
+        mu = self.fc_mu(x)
+        log_var = self.fc_logvar(x)
+        return [mu, log_var]
+
+    def decode(self, z):
+        z = self.decoder(z)
+        z = z.view(-1, 1, 28, 28)
+        return z
+
+    def forward(self, x):
+        mu, log_var = self.encode(x)
+        z = self.reparameterize(mu, log_var)
+        return [self.decode(z), x, mu, log_var]
+
+    def reparameterize(self, mu, logvar):
+        if self.training:
+            std = torch.exp(0.5 * logvar)
+            eps = torch.randn_like(std)
+            return eps * std + mu
+        else:
+            return mu
+
+    def loss_function(self, *args, **kwargs):
+        recons, input, mu, log_var = args
+        B = input.shape[0]
+        N = kwargs['N']
+        recon_loss = F.binary_cross_entropy(recons, input.detach(), reduction='mean')
+        # recon_loss = F.mse_loss(recons, input)
+        kld_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp(), dim=1), dim=0)
+        loss = recon_loss + kld_loss * B / N
+        return loss, recon_loss, kld_loss
+
+    def gr_loss_function(self, session_num, *args, **kwargs):
+        if session_num < 2:
+            return self.loss_function(*args, **kwargs)[0]
+        recons, input, mu, log_var = args
+        B = input.shape[0]
+        N = kwargs['N']
+        input = input.detach()
+        recon_loss_c = F.binary_cross_entropy(recons[:B//2], input[:B//2], reduction='mean')
+        kld_loss_c = torch.mean(-0.5 * torch.sum(1 + log_var[:B//2] - mu[:B//2].pow(2) - log_var[:B//2].exp(), dim=1), dim=0)
+        loss_c = recon_loss_c + kld_loss_c * B / N
+
+        recon_loss_r = F.binary_cross_entropy(recons[B//2:], input[B//2:], reduction='mean')
+        kld_loss_r = torch.mean(-0.5 * torch.sum(1 + log_var[B//2:] - mu[B//2:].pow(2) - log_var[B//2:].exp(), dim=1), dim=0)
+        loss_r = recon_loss_r + kld_loss_r * B / N
+        return loss_c / session_num + (1 - 1 / session_num) * loss_r
+
+    def sample(self, sample_num=1):
+        z = torch.randn(sample_num, self.latent_dim)
+        z = z.to(next(self.parameters()).device)
+        samples = self.decode(z)
+        return samples

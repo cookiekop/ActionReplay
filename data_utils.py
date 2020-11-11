@@ -21,6 +21,8 @@ gray_scale_transform = transforms.Compose([transforms.Resize([224, 224]),
                                            transforms.ToTensor(),
                                            transforms.Lambda(lambda x: x.repeat(3, 1, 1))])
 
+original_transform = transforms.Compose([transforms.ToTensor()])
+
 class MPIIDataSet(Dataset):
     def __init__(self, dir, mode='train', transform=transform):
         self.dir = dir
@@ -137,7 +139,7 @@ class GeneralVideoDataset(Dataset):
 
         return sample
 
-session_num = 5 # 0 for whole dataset learning, 1-5 for 5 class-inc learning
+session_num = 4 # 0 for whole dataset learning, 1-5 for 5 class-inc learning
 def train_collate(batch):
     data = None
     target = []
@@ -175,7 +177,7 @@ def get_data(dataset_used, batch_size, get_mean_std=False):
     elif dataset_used == 'MNIST':
         data = MNIST('datasets/',
                      train=True,
-                     transform=gray_scale_transform,
+                     transform=original_transform,
                      download=True)
     elif dataset_used == 'FashionMNIST':
         data = FashionMNIST('datasets/',
